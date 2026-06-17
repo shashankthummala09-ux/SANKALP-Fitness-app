@@ -16,6 +16,8 @@ model User {
   language   String           @default("en")
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
+  isAdmin    Boolean          @default(false)
+  lastLoginAt DateTime?
   goals      Goal[]
   weightLogs WeightLog[]
   reviews    Review[]
@@ -198,4 +200,13 @@ model RoutineExercise {
   order      Int      @default(0)
 
   @@map("routine_exercises")
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  action    String
+  details   String
+  loggedAt  DateTime @default(now())
+
+  @@map("activity_logs")
 }

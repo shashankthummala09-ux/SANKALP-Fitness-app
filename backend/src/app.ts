@@ -7,6 +7,8 @@ import goalRoutes from './routes/goal.routes';
 import exerciseRoutes from './routes/exercise.routes';
 import workoutRoutes from './routes/workout.routes';
 import measurementRoutes from './routes/measurement.routes';
+import routineRoutes from './routes/routine.routes';
+import adminRoutes from './routes/admin.routes';
 
 // Load environment variables
 dotenv.config();
@@ -44,6 +46,8 @@ app.use('/api/goals', goalRoutes);
 app.use('/api/exercises', exerciseRoutes);
 app.use('/api/workouts', workoutRoutes);
 app.use('/api/measurements', measurementRoutes);
+app.use('/api/routines', routineRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

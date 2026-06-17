@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Dumbbell, Menu, X, LogOut, User as UserIcon, Calendar, BarChart3, BookOpen, Globe, ChevronDown } from 'lucide-react';
+import { Dumbbell, Menu, X, LogOut, User as UserIcon, Calendar, BarChart3, BookOpen, Globe, ChevronDown, Shield } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useTranslation } from 'react-i18next';
 
@@ -137,8 +137,8 @@ export default function Navbar() {
               <Link 
                 to="/dashboard" 
                 className={isActiveRoute('/dashboard') 
-                  ? "text-brand-primary font-bold flex items-center gap-1.5 transition-colors duration-200" 
-                  : "text-brand-muted hover:text-white transition-colors duration-200 flex items-center gap-1.5 font-medium"
+                  ? "text-[#FF6B00] font-bold flex items-center gap-1.5 transition-colors duration-200" 
+                  : "text-[#8A8A8A] hover:text-white transition-colors duration-200 flex items-center gap-1.5 font-medium"
                 }
               >
                 <BarChart3 className="h-4 w-4" />
@@ -149,8 +149,8 @@ export default function Navbar() {
             <Link 
               to="/exercises" 
               className={isActiveRoute('/exercises') 
-                ? "text-brand-primary font-bold flex items-center gap-1.5 transition-colors duration-200" 
-                : "text-brand-muted hover:text-white transition-colors duration-200 flex items-center gap-1.5 font-medium"
+                ? "text-[#FF6B00] font-bold flex items-center gap-1.5 transition-colors duration-200" 
+                : "text-[#8A8A8A] hover:text-white transition-colors duration-200 flex items-center gap-1.5 font-medium"
               }
             >
               <BookOpen className="h-4 w-4" />
@@ -162,8 +162,8 @@ export default function Navbar() {
                 <Link 
                   to="/history" 
                   className={isActiveRoute('/history') 
-                    ? "text-brand-primary font-bold flex items-center gap-1.5 transition-colors duration-200" 
-                    : "text-brand-muted hover:text-white transition-colors duration-200 flex items-center gap-1.5 font-medium"
+                    ? "text-[#FF6B00] font-bold flex items-center gap-1.5 transition-colors duration-200" 
+                    : "text-[#8A8A8A] hover:text-white transition-colors duration-200 flex items-center gap-1.5 font-medium"
                   }
                 >
                   <Calendar className="h-4 w-4" />
@@ -172,13 +172,25 @@ export default function Navbar() {
                 <Link 
                   to="/log" 
                   className={isActiveRoute('/log') 
-                    ? "text-brand-primary font-bold flex items-center gap-1.5 transition-colors duration-200" 
-                    : "text-brand-muted hover:text-white transition-colors duration-200 flex items-center gap-1.5 font-medium"
+                    ? "text-[#FF6B00] font-bold flex items-center gap-1.5 transition-colors duration-200" 
+                    : "text-[#8A8A8A] hover:text-white transition-colors duration-200 flex items-center gap-1.5 font-medium"
                   }
                 >
                   <Dumbbell className="h-4 w-4" />
                   {t('navbar.logWorkout')}
                 </Link>
+                {user?.isAdmin && (
+                  <Link 
+                    to="/admin" 
+                    className={isActiveRoute('/admin') 
+                      ? "text-[#FF6B00] font-bold flex items-center gap-1.5 transition-colors duration-200" 
+                      : "text-[#8A8A8A] hover:text-white transition-colors duration-200 flex items-center gap-1.5 font-medium"
+                    }
+                  >
+                    <Shield className="h-4 w-4" />
+                    Admin
+                  </Link>
+                )}
                 
                 {/* Language Selector Dropdown */}
                 <div 
@@ -234,13 +246,13 @@ export default function Navbar() {
                   <Link 
                     to="/profile" 
                     className={`flex items-center gap-2 transition-colors duration-200 ${
-                      isActiveRoute('/profile') ? 'text-brand-primary font-bold' : 'text-brand-muted hover:text-white'
+                      isActiveRoute('/profile') ? 'text-[#FF6B00] font-bold' : 'text-[#8A8A8A] hover:text-white'
                     }`}
                   >
                     <div className={`flex h-8 w-8 items-center justify-center rounded-full font-semibold text-sm transition-colors duration-200 ${
                       isActiveRoute('/profile')
-                        ? 'bg-brand-primary text-white border border-brand-primary'
-                        : 'bg-brand-primary/20 border border-brand-primary/30 text-brand-primary'
+                        ? 'bg-[#FF6B00] text-white border border-[#FF6B00]'
+                        : 'bg-[#FF6B00]/20 border border-[#FF6B00]/30 text-[#FF6B00]'
                     }`}>
                       {user?.name.charAt(0).toUpperCase()}
                     </div>
@@ -340,8 +352,8 @@ export default function Navbar() {
               to="/dashboard"
               onClick={() => setIsOpen(false)}
               className={isActiveRoute('/dashboard')
-                ? "block text-base font-bold text-brand-primary px-3 py-2 rounded-md bg-brand-primary/10 border-l-2 border-brand-primary"
-                : "block text-base font-medium text-brand-muted hover:text-white px-3 py-2 rounded-md hover:bg-white/5"
+                ? "block text-base font-bold text-[#FF6B00] px-3 py-2 rounded-md bg-[#FF6B00]/10 border-l-2 border-[#FF6B00]"
+                : "block text-base font-medium text-[#8A8A8A] hover:text-white px-3 py-2 rounded-md hover:bg-white/5"
               }
             >
               {t('navbar.dashboard')}
@@ -351,8 +363,8 @@ export default function Navbar() {
             to="/exercises"
             onClick={() => setIsOpen(false)}
             className={isActiveRoute('/exercises')
-              ? "block text-base font-bold text-brand-primary px-3 py-2 rounded-md bg-brand-primary/10 border-l-2 border-brand-primary"
-              : "block text-base font-medium text-brand-muted hover:text-white px-3 py-2 rounded-md hover:bg-white/5"
+              ? "block text-base font-bold text-[#FF6B00] px-3 py-2 rounded-md bg-[#FF6B00]/10 border-l-2 border-[#FF6B00]"
+              : "block text-base font-medium text-[#8A8A8A] hover:text-white px-3 py-2 rounded-md hover:bg-white/5"
             }
           >
             {t('navbar.exercises')}
@@ -363,8 +375,8 @@ export default function Navbar() {
                 to="/history"
                 onClick={() => setIsOpen(false)}
                 className={isActiveRoute('/history')
-                  ? "block text-base font-bold text-brand-primary px-3 py-2 rounded-md bg-brand-primary/10 border-l-2 border-brand-primary"
-                  : "block text-base font-medium text-brand-muted hover:text-white px-3 py-2 rounded-md hover:bg-white/5"
+                  ? "block text-base font-bold text-[#FF6B00] px-3 py-2 rounded-md bg-[#FF6B00]/10 border-l-2 border-[#FF6B00]"
+                  : "block text-base font-medium text-[#8A8A8A] hover:text-white px-3 py-2 rounded-md hover:bg-white/5"
                 }
               >
                 {t('navbar.history')}
@@ -373,21 +385,33 @@ export default function Navbar() {
                 to="/log"
                 onClick={() => setIsOpen(false)}
                 className={isActiveRoute('/log')
-                  ? "block text-base font-bold text-brand-primary px-3 py-2 rounded-md bg-brand-primary/10 border-l-2 border-brand-primary"
-                  : "block text-base font-medium text-brand-muted hover:text-white px-3 py-2 rounded-md hover:bg-white/5"
+                  ? "block text-base font-bold text-[#FF6B00] px-3 py-2 rounded-md bg-[#FF6B00]/10 border-l-2 border-[#FF6B00]"
+                  : "block text-base font-medium text-[#8A8A8A] hover:text-white px-3 py-2 rounded-md hover:bg-white/5"
                 }
               >
                 {t('navbar.logWorkout')}
               </Link>
+              {user?.isAdmin && (
+                <Link
+                  to="/admin"
+                  onClick={() => setIsOpen(false)}
+                  className={isActiveRoute('/admin')
+                    ? "block text-base font-bold text-[#FF6B00] px-3 py-2 rounded-md bg-[#FF6B00]/10 border-l-2 border-[#FF6B00]"
+                    : "block text-base font-medium text-[#8A8A8A] hover:text-white px-3 py-2 rounded-md hover:bg-white/5"
+                  }
+                >
+                  Admin Panel
+                </Link>
+              )}
               <Link
                 to="/profile"
                 onClick={() => setIsOpen(false)}
                 className={isActiveRoute('/profile')
-                  ? "flex items-center gap-2 text-base font-bold text-brand-primary px-3 py-2 rounded-md bg-brand-primary/10 border-l-2 border-brand-primary group"
-                  : "flex items-center gap-2 text-base font-medium text-brand-muted hover:text-white px-3 py-2 rounded-md hover:bg-white/5 group"
+                  ? "flex items-center gap-2 text-base font-bold text-[#FF6B00] px-3 py-2 rounded-md bg-[#FF6B00]/10 border-l-2 border-[#FF6B00] group"
+                  : "flex items-center gap-2 text-base font-medium text-[#8A8A8A] hover:text-white px-3 py-2 rounded-md hover:bg-white/5 group"
                 }
               >
-                <UserIcon className={`h-5 w-5 transition-colors duration-200 ${isActiveRoute('/profile') ? 'text-brand-primary' : 'text-brand-muted group-hover:text-white'}`} />
+                <UserIcon className={`h-5 w-5 transition-colors duration-200 ${isActiveRoute('/profile') ? 'text-[#FF6B00]' : 'text-[#8A8A8A] group-hover:text-white'}`} />
                 {t('navbar.profile')} ({user?.name})
               </Link>
               

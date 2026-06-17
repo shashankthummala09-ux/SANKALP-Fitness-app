@@ -16,6 +16,7 @@ import GymListing from './pages/GymListing';
 import GymDetail from './pages/GymDetail';
 import LogMeasurements from './pages/LogMeasurements';
 import MeasurementsHistory from './pages/MeasurementsHistory';
+import AdminPanel from './pages/AdminPanel';
 import { useAuthStore } from './store/authStore';
 
 // Protected Route Wrapper
@@ -31,6 +32,21 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+};
+
+// Admin Route Wrapper
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, user, loading } = useAuthStore();
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-brand-dark">
+        <Dumbbell className="h-10 w-10 text-brand-primary animate-spin" />
+      </div>
+    );
+  }
+
+  return isAuthenticated && user?.isAdmin ? <>{children}</> : <Navigate to="/dashboard" replace />;
 };
 
 export default function App() {
@@ -123,6 +139,14 @@ export default function App() {
                 <ProtectedRoute>
                   <MeasurementsHistory />
                 </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin" 
+              element={
+                <AdminRoute>
+                  <AdminPanel />
+                </AdminRoute>
               } 
             />
 

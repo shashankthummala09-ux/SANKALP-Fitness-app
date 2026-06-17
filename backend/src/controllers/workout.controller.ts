@@ -156,6 +156,15 @@ export const logWorkoutSession = async (req: Request, res: Response) => {
       };
     });
 
+    // Log workout session activity
+    const userObj = await prisma.user.findUnique({ where: { id: userId } });
+    await prisma.activityLog.create({
+      data: {
+        action: 'WORKOUT_LOGGED',
+        details: `User ${userObj?.name || 'Unknown'} logged a workout session of ${result.summary.durationMinutes} mins (Volume: ${result.summary.totalVolume} kg).`,
+      },
+    });
+
     return res.status(201).json({
       message: 'Workout session logged successfully',
       session: result.session,
@@ -195,6 +204,7 @@ export const getLastWorkout = async (req: Request, res: Response) => {
                 name: true,
                 difficulty: true,
                 equipment: true,
+                muscleGroups: true,
               },
             },
             sets: {
@@ -251,6 +261,7 @@ export const getWorkoutHistory = async (req: Request, res: Response) => {
                 name: true,
                 difficulty: true,
                 equipment: true,
+                muscleGroups: true,
               },
             },
             sets: {

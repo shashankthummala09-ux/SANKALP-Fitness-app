@@ -67,9 +67,14 @@ export const register = async (req: Request, res: Response) => {
         password: hashedPassword,
         city: city || 'Unknown',
         language: language || 'en',
-        // Optional fields dob, gender are stored dynamically or can be added/extended as needed.
-        // Prisma schema can handle these if they are added or we can use custom profile models.
-        // For onboarding, the PRD lists Goals setup separately, so they are created in goals table later.
+      },
+    });
+
+    // Log registration activity
+    await prisma.activityLog.create({
+      data: {
+        action: 'SIGNUP',
+        details: `User ${user.name} (${user.email}) signed up.`,
       },
     });
 
@@ -86,6 +91,8 @@ export const register = async (req: Request, res: Response) => {
         email: user.email,
         city: user.city,
         language: user.language,
+        isAdmin: user.isAdmin,
+        lastLoginAt: user.lastLoginAt,
         createdAt: user.createdAt,
       },
     });
@@ -123,6 +130,20 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid credentials.' });
     }
 
+    // Update last login timestamp
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
+
+    // Log login activity
+    await prisma.activityLog.create({
+      data: {
+        action: 'LOGIN',
+        details: `User ${user.name} (${user.email}) logged in.`,
+      },
+    });
+
     // 3. Generate token
     const token = generateToken(user.id);
 
@@ -131,12 +152,14 @@ export const login = async (req: Request, res: Response) => {
       message: 'Logged in successfully',
       token,
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        city: user.city,
-        language: user.language,
-        createdAt: user.createdAt,
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        city: updatedUser.city,
+        language: updatedUser.language,
+        isAdmin: updatedUser.isAdmin,
+        lastLoginAt: updatedUser.lastLoginAt,
+        createdAt: updatedUser.createdAt,
       },
     });
   } catch (error) {
@@ -178,6 +201,8 @@ export const getMe = async (req: Request, res: Response) => {
         city: true,
         language: true,
         createdAt: true,
+        isAdmin: true,
+        lastLoginAt: true,
         goals: true, // Include onboarding goals if present
       },
     });

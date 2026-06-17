@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
   Dumbbell, Search, Square, Timer, Plus, Trash2, Award, Clock, 
-  Weight, Sparkles, Smile, MessageSquare, PlusCircle, Check, X, AlertCircle, RefreshCw 
+  Weight, Sparkles, Smile, MessageSquare, PlusCircle, Check, X, AlertCircle, RefreshCw,
+  BookOpen, AlertTriangle
 } from 'lucide-react';
 import api from '../services/api';
 
 interface ExerciseLookup {
   id: string;
   name: string;
+  muscleGroups?: string[];
 }
 
 interface SetState {
@@ -66,6 +68,17 @@ export default function WorkoutLogger() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  // Routines / Templates states
+  const [routines, setRoutines] = useState<any[]>([]);
+  const [routinesLoading, setRoutinesLoading] = useState(false);
+  const [isSaveRoutineModalOpen, setIsSaveRoutineModalOpen] = useState(false);
+  const [routineName, setRoutineName] = useState('');
+  const [routineSaving, setRoutineSaving] = useState(false);
+  const [routineModalError, setRoutineModalError] = useState('');
+
+  // Rest-day nudge states
+  const [recentMuscles, setRecentMuscles] = useState<string[]>([]);
+
   // Interval reference for timer
   const timerRef = useRef<any>(null);
 
@@ -94,15 +107,42 @@ export default function WorkoutLogger() {
     const initData = async () => {
       try {
         const res = await api.get('/api/exercises');
-        setAvailableExercises(res.data.exercises.map((e: any) => ({ id: e.id, name: e.name })));
+        setAvailableExercises(res.data.exercises.map((e: any) => ({ id: e.id, name: e.name, muscleGroups: e.muscleGroups })));
 
         // Check if last workout exists to enable "Repeat" button
         const lastRes = await api.get('/api/workouts/last');
         if (lastRes.data.hasHistory) {
           setHasLastWorkout(true);
         }
+
+        // Fetch routines templates
+        setRoutinesLoading(true);
+        const routinesRes = await api.get('/api/routines');
+        setRoutines(routinesRes.data.routines);
+        setRoutinesLoading(false);
+
+        // Fetch history for nudge calculations
+        const historyRes = await api.get('/api/workouts');
+        const last24h = 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        const muscles: string[] = [];
+        
+        historyRes.data.history.forEach((session: any) => {
+          const sessionTime = new Date(session.startTime).getTime();
+          if (now - sessionTime < last24h) {
+            session.exercises.forEach((se: any) => {
+              if (se.exercise?.muscleGroups) {
+                se.exercise.muscleGroups.forEach((m: string) => {
+                  muscles.push(m.toLowerCase());
+                });
+              }
+            });
+          }
+        });
+        setRecentMuscles(Array.from(new Set(muscles)));
       } catch (err) {
         console.error('Error initiating workout logger page:', err);
+        setRoutinesLoading(false);
       }
     };
     
@@ -148,6 +188,77 @@ export default function WorkoutLogger() {
     } finally {
       setLastWorkoutLoading(false);
     }
+  };
+
+  const handleStartRoutine = (routine: any) => {
+    setStartTime(new Date());
+    setIsWorkoutActive(true);
+    setElapsedTime('00:00:00');
+
+    // Pre-populate with routine exercises, each having 1 default set
+    const prefilled = routine.exercises.map((re: any) => ({
+      exerciseId: re.exercise.id,
+      name: re.exercise.name,
+      note: '',
+      sets: [
+        {
+          setNumber: 1,
+          weight: 40.0,
+          reps: 10,
+          restTime: 60,
+        },
+      ],
+    }));
+
+    setLoggedExercises(prefilled);
+  };
+
+  const handleDeleteRoutine = async (routineId: string) => {
+    if (!window.confirm('Are you sure you want to delete this routine?')) return;
+    try {
+      await api.delete(`/api/routines/${routineId}`);
+      setRoutines(routines.filter(r => r.id !== routineId));
+    } catch (err) {
+      console.error('Error deleting routine:', err);
+    }
+  };
+
+  const handleSaveRoutine = async () => {
+    if (!routineName.trim()) return;
+    setRoutineSaving(true);
+    setRoutineModalError('');
+    try {
+      const exerciseIds = loggedExercises.map(e => e.exerciseId);
+      await api.post('/api/routines', {
+        name: routineName.trim(),
+        exerciseIds
+      });
+      setIsSaveRoutineModalOpen(false);
+      // Refresh routines list
+      const routinesRes = await api.get('/api/routines');
+      setRoutines(routinesRes.data.routines);
+    } catch (err: any) {
+      console.error('Error saving routine:', err);
+      setRoutineModalError(err.response?.data?.error || 'Failed to save routine template.');
+    } finally {
+      setRoutineSaving(false);
+    }
+  };
+
+  // Helper to determine conflicting muscles trained recently
+  const getConflictingMuscles = () => {
+    const activeMuscles: string[] = [];
+    loggedExercises.forEach(le => {
+      const matched = availableExercises.find(ae => ae.id === le.exerciseId);
+      if (matched && matched.muscleGroups) {
+        matched.muscleGroups.forEach(m => {
+          if (recentMuscles.includes(m.toLowerCase())) {
+            activeMuscles.push(m);
+          }
+        });
+      }
+    });
+    return Array.from(new Set(activeMuscles));
   };
 
   // 3. Add Exercise to Session
@@ -293,49 +404,103 @@ export default function WorkoutLogger() {
 
   if (!isWorkoutActive) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-16 sm:px-6 lg:px-8 text-center min-h-[calc(100vh-4rem)] flex flex-col justify-center">
-        <div className="glass-panel p-8 sm:p-12 border border-white/10 shadow-[0_8px_32px_0_rgba(255,107,0,0.15)] space-y-8 animate-scale-up">
-          <div className="space-y-3">
-            <div className="flex justify-center">
-              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-brand-primary/10 border border-brand-primary/20 text-brand-primary shadow-[0_0_25px_rgba(255,107,0,0.2)]">
-                <Dumbbell className="h-10 w-10 animate-pulse" />
+      <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8 min-h-[calc(100vh-4rem)] flex flex-col justify-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+          {/* Left Pane: Ready to Train Card */}
+          <div className="glass-panel p-8 sm:p-10 border border-white/10 shadow-[0_8px_32px_0_rgba(255,107,0,0.15)] flex flex-col justify-between space-y-6 text-center">
+            <div className="space-y-4">
+              <div className="flex justify-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-primary/10 border border-brand-primary/20 text-brand-primary shadow-[0_0_20px_rgba(255,107,0,0.15)]">
+                  <Dumbbell className="h-8 w-8 animate-pulse" />
+                </div>
               </div>
+              <h2 className="text-2xl font-extrabold text-white tracking-tight">
+                {t('workoutLogger.readyToTrain', 'Ready to Train?')}
+              </h2>
+              <p className="text-brand-muted text-xs max-w-sm mx-auto leading-relaxed">
+                {t('workoutLogger.readyToTrainDesc', 'Log your movements, track your lifted weight volume, and set new personal records.')}
+              </p>
             </div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight pt-2">
-              {t('workoutLogger.readyToTrain', 'Ready to Train?')}
-            </h1>
-            <p className="text-brand-muted text-sm max-w-sm mx-auto leading-relaxed">
-              {t('workoutLogger.readyToTrainDesc', 'Log your movements, track your lifted weight volume, and set new personal records.')}
-            </p>
-          </div>
 
-          <div className="space-y-4 pt-4">
-            <button
-              onClick={handleStartWorkout}
-              className="w-full btn-primary py-3.5 font-bold text-base tracking-wide flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-brand-primary/15"
-            >
-              <PlusCircle className="h-5 w-5" />
-              {t('workoutLogger.startEmptyWorkout', 'Start an Empty Workout')}
-            </button>
-
-            {hasLastWorkout && (
+            <div className="space-y-3.5 pt-2">
               <button
-                onClick={handleRepeatLastWorkout}
-                disabled={lastWorkoutLoading}
-                className="w-full btn-secondary py-3.5 font-bold text-base flex justify-center items-center gap-2 cursor-pointer border border-brand-primary/20 hover:border-brand-primary/50 text-brand-text"
+                onClick={handleStartWorkout}
+                className="w-full btn-primary py-3 font-bold text-sm tracking-wide flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-brand-primary/10"
               >
-                {lastWorkoutLoading ? (
-                  <RefreshCw className="h-5 w-5 animate-spin text-brand-primary" />
-                ) : (
-                  <RefreshCw className="h-5 w-5 text-brand-primary" />
-                )}
-                {t('workoutLogger.repeatLast', 'Repeat Last Workout')}
+                <PlusCircle className="h-4.5 w-4.5" />
+                {t('workoutLogger.startEmptyWorkout', 'Start an Empty Workout')}
               </button>
-            )}
+
+              {hasLastWorkout && (
+                <button
+                  onClick={handleRepeatLastWorkout}
+                  disabled={lastWorkoutLoading}
+                  className="w-full btn-secondary py-3 font-bold text-sm flex justify-center items-center gap-2 cursor-pointer border border-brand-primary/10 hover:border-brand-primary/30 text-brand-text"
+                >
+                  {lastWorkoutLoading ? (
+                    <RefreshCw className="h-4.5 w-4.5 animate-spin text-brand-primary" />
+                  ) : (
+                    <RefreshCw className="h-4.5 w-4.5 text-brand-primary" />
+                  )}
+                  {t('workoutLogger.repeatLast', 'Repeat Last Workout')}
+                </button>
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-white/5 text-[10px] text-brand-muted">
+              {t('common.tagline', 'Where every transformation begins')}
+            </div>
           </div>
 
-          <div className="pt-4 border-t border-white/5 text-[11px] text-brand-muted">
-            {t('common.tagline', 'Where every transformation begins')}
+          {/* Right Pane: My Routines Card */}
+          <div className="glass-panel p-8 sm:p-10 border border-white/10 flex flex-col justify-between space-y-6">
+            <div className="space-y-4 flex-grow flex flex-col">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2 border-b border-white/5 pb-2.5">
+                <BookOpen className="h-5 w-5 text-brand-primary" />
+                {t('workoutLogger.myRoutines', 'My Routines')}
+              </h3>
+
+              {routinesLoading ? (
+                <div className="flex-grow flex items-center justify-center py-10">
+                  <RefreshCw className="h-8 w-8 animate-spin text-brand-primary" />
+                </div>
+               ) : routines.length === 0 ? (
+                <div className="flex-grow flex flex-col items-center justify-center py-10 text-center text-brand-muted space-y-3">
+                  <Sparkles className="h-8 w-8 text-brand-muted/30 animate-pulse" />
+                  <p className="font-semibold text-white text-sm">No Saved Routines</p>
+                  <p className="text-xs max-w-xs leading-relaxed">
+                    Create templates during active sessions to trigger workout configurations instantly.
+                  </p>
+                </div>
+               ) : (
+                <div className="space-y-3.5 max-h-[300px] overflow-y-auto pr-1">
+                  {routines.map((routine) => (
+                    <div key={routine.id} className="flex justify-between items-center bg-white/[0.02] border border-white/5 rounded-xl p-3 hover:bg-white/[0.04] transition-all">
+                      <div className="space-y-0.5 text-left max-w-[200px]">
+                        <span className="font-bold text-sm text-white block truncate">{routine.name}</span>
+                        <span className="text-[10px] text-brand-muted block truncate">
+                          {routine.exercises.map((re: any) => re.exercise.name).join(', ')}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => handleStartRoutine(routine)}
+                          className="btn-primary py-1.5 px-3 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          Start
+                        </button>
+                        <button
+                          onClick={() => handleDeleteRoutine(routine.id)}
+                          className="p-1.5 rounded-lg bg-white/5 border border-white/5 hover:border-red-500/20 text-brand-muted hover:text-red-400 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+               )}
+            </div>
           </div>
         </div>
       </div>
@@ -385,6 +550,21 @@ export default function WorkoutLogger() {
             </button>
           )}
 
+          {/* Save as Routine Button */}
+          {loggedExercises.length > 0 && (
+            <button
+              onClick={() => {
+                setRoutineName('');
+                setRoutineModalError('');
+                setIsSaveRoutineModalOpen(true);
+              }}
+              className="flex-grow md:flex-grow-0 btn-secondary py-2.5 px-4 flex items-center justify-center gap-2 text-sm cursor-pointer border-brand-primary/20 hover:border-brand-primary/50 text-brand-text font-bold"
+            >
+              <BookOpen className="h-4.5 w-4.5 text-brand-primary" />
+              {t('workoutLogger.saveAsRoutine', 'Save as Routine')}
+            </button>
+          )}
+
           {/* Finish workout button */}
           <button
             onClick={handleFinishWorkout}
@@ -410,6 +590,19 @@ export default function WorkoutLogger() {
         {/* Left / Center: Session Logged Exercises */}
         <div className="lg:col-span-2 space-y-6">
           
+          {/* Rest-Day Muscle Nudge */}
+          {loggedExercises.length > 0 && getConflictingMuscles().length > 0 && (
+            <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-4 text-sm text-amber-400 flex items-start gap-3 shadow-md">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400 mt-0.5 animate-pulse" />
+              <div>
+                <p className="font-bold text-white mb-0.5">{t('workoutLogger.nudgeTitle', 'Rest-Day Muscle Nudge')}</p>
+                <p className="text-xs">
+                  {t('workoutLogger.nudgeText', 'You trained {{muscles}} yesterday — consider giving these muscles a rest today to support optimal recovery.', { muscles: getConflictingMuscles().join(', ') })}
+                </p>
+              </div>
+            </div>
+          )}
+
           {loggedExercises.length === 0 ? (
             <div className="text-center py-20 glass-panel border border-dashed border-white/10 bg-white/[0.01] flex flex-col items-center justify-center">
               <Dumbbell className="h-16 w-16 text-brand-muted/30 mb-4 animate-bounce" />
@@ -759,6 +952,80 @@ export default function WorkoutLogger() {
               >
                 {t('common.cancel')}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save as Routine Dialog */}
+      {isSaveRoutineModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            onClick={() => setIsSaveRoutineModalOpen(false)} 
+            className="absolute inset-0 bg-brand-dark/85 backdrop-blur-sm cursor-pointer"
+          ></div>
+
+          {/* Dialog Panel */}
+          <div className="relative w-full max-w-md glass-panel p-6 sm:p-8 border border-white/10 shadow-2xl space-y-5 z-10 animate-scale-up">
+            <div className="flex justify-between items-center pb-2 border-b border-white/5">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-brand-primary" />
+                {t('workoutLogger.saveRoutineTemplate', 'Save Routine Template')}
+              </h3>
+              <button 
+                onClick={() => setIsSaveRoutineModalOpen(false)}
+                className="text-brand-muted hover:text-white p-1 rounded-md hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {routineModalError && (
+              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 p-3 rounded-lg flex items-center gap-2">
+                <AlertCircle className="h-4.5 w-4.5 shrink-0" />
+                <span>{routineModalError}</span>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div className="space-y-1.5 text-left">
+                <label htmlFor="routineName" className="block text-xs font-semibold text-brand-muted uppercase tracking-wider">
+                  {t('workoutLogger.routineNameLabel', 'Routine Name')}
+                </label>
+                <input
+                  id="routineName"
+                  type="text"
+                  autoFocus
+                  placeholder={t('workoutLogger.routineNamePlaceholder', 'e.g. Push Day, Upper Body')}
+                  value={routineName}
+                  onChange={(e) => setRoutineName(e.target.value)}
+                  className="glass-input w-full text-sm py-2"
+                />
+              </div>
+
+              <div className="text-xs text-brand-muted leading-relaxed text-left">
+                {t('workoutLogger.saveRoutineInfo', 'Saving as routine will record the list of selected movements so you can load them instantly in your next session.')}
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsSaveRoutineModalOpen(false)}
+                  className="w-1/2 btn-secondary py-2.5 text-xs font-bold"
+                  disabled={routineSaving}
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveRoutine}
+                  className="w-1/2 btn-primary py-2.5 text-xs font-bold cursor-pointer"
+                  disabled={routineSaving || !routineName.trim()}
+                >
+                  {routineSaving ? t('common.saving', 'Saving...') : t('common.save', 'Save Routine')}
+                </button>
+              </div>
             </div>
           </div>
         </div>

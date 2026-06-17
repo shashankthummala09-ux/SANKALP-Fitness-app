@@ -7,6 +7,7 @@ export interface User {
   email: string;
   city: string;
   createdAt?: string;
+  isAdmin?: boolean;
 }
 
 interface AuthState {
@@ -54,7 +55,8 @@ export const useAuthStore = create<AuthState>((set) => ({
                 name: res.data.user.name,
                 email: res.data.user.email,
                 city: res.data.user.city,
-                createdAt: res.data.user.createdAt
+                createdAt: res.data.user.createdAt,
+                isAdmin: res.data.user.isAdmin
               }, 
               token, 
               isAuthenticated: true 
