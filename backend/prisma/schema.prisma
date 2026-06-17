@@ -1,0 +1,201 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id         String           @id @default(uuid())
+  name       String
+  email      String           @unique
+  password   String
+  city       String           @default("Unknown")
+  language   String           @default("en")
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  goals      Goal[]
+  weightLogs WeightLog[]
+  reviews    Review[]
+  sessions   WorkoutSession[]
+  prRecords  PRRecord[]
+  measurements Measurement[]
+  routines     Routine[]
+
+  @@map("users")
+}
+
+model Goal {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentWeight Float
+  goalWeight    Float
+  height        Float
+  activityLevel String    // Sedentary, Lightly Active, Moderately Active, Very Active
+  primaryGoal   String    // Lose Weight, Gain Muscle, Improve Endurance, Stay Fit
+  targetDate    DateTime?
+  sankalpText   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("goals")
+}
+
+model WeightLog {
+  id       String   @id @default(uuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weight   Float
+  loggedAt DateTime @default(now())
+
+  @@map("weight_logs")
+}
+
+model Gym {
+  id        String    @id @default(uuid())
+  name      String
+  city      String
+  address   String
+  fee       Float
+  rating    Float     @default(0.0)
+  amenities String[]
+  trainers  Trainer[]
+  reviews   Review[]
+
+  @@map("gyms")
+}
+
+model Trainer {
+  id             String @id @default(uuid())
+  gymId          String
+  gym            Gym    @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  name           String
+  phone          String
+  specialization String
+  fee            Float
+  experience     Int
+
+  @@map("trainers")
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gymId     String
+  gym       Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  rating    Float
+  comment   String
+  createdAt DateTime @default(now())
+
+  @@map("reviews")
+}
+
+model Exercise {
+  id               String            @id @default(uuid())
+  name             String
+  muscleGroups     String[]          // e.g. ["chest", "shoulders"]
+  difficulty       String            // Beginner, Intermediate, Advanced
+  equipment        String
+  gifUrl           String?
+  imageUrl         String?
+  videoUrl         String?
+  formSteps        String[]
+  commonMistakes   String[]
+  proTips          String[]
+  breathingCue     String?
+  sessionExercises SessionExercise[]
+  prRecords        PRRecord[]
+  routineExercises RoutineExercise[]
+
+  @@map("exercises")
+}
+
+model WorkoutSession {
+  id         String            @id @default(uuid())
+  userId     String
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startTime  DateTime          @default(now())
+  endTime    DateTime?
+  note       String?
+  moodRating Int?
+  exercises  SessionExercise[]
+
+  @@map("workout_sessions")
+}
+
+model SessionExercise {
+  id         String         @id @default(uuid())
+  sessionId  String
+  session    WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exerciseId String
+  exercise   Exercise       @relation(fields: [exerciseId], references: [id])
+  note       String?
+  sets       Set[]
+
+  @@map("session_exercises")
+}
+
+model Set {
+  id                String          @id @default(uuid())
+  sessionExerciseId String
+  sessionExercise   SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
+  setNumber         Int
+  weight            Float
+  reps              Int
+  restTime          Int             // rest time in seconds
+
+  @@map("sets")
+}
+
+model PRRecord {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exerciseId String
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  maxWeight  Float
+  achievedAt DateTime @default(now())
+
+  @@map("pr_records")
+}
+
+model Measurement {
+  id       String   @id @default(uuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chest    Float
+  waist    Float
+  arms     Float
+  thighs   Float
+  photo    String?  // Base64 encoded image string
+  loggedAt DateTime @default(now())
+
+  @@map("measurements")
+}
+
+model Routine {
+  id        String            @id @default(uuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  exercises RoutineExercise[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@map("routines")
+}
+
+model RoutineExercise {
+  id         String   @id @default(uuid())
+  routineId  String
+  routine    Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exerciseId String
+  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+  order      Int      @default(0)
+
+  @@map("routine_exercises")
+}
